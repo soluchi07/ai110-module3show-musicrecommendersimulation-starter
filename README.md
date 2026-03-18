@@ -21,11 +21,21 @@ Real-world recommendation systems usually combine many signals (your past listen
 
 Finalized `UserProfile` for this simulation:
 
-```text
-favorite_genre: indie pop
-favorite_mood: chill
-target_energy: 0.55
-likes_acoustic: true
+```
+class UserProfile:
+    # Multiple tastes with strength (0.0 to 1.0)
+    genre_weights: Dict[str, float]
+    mood_weights: Dict[str, float]
+
+    # Prefer a range, not a single target
+    energy_range: Tuple[float, float]
+
+    # Continuous preference instead of yes/no
+    # 0.0 = dislikes acoustic, 1.0 = strongly likes acoustic
+    acoustic_preference: float
+
+    # Optional extra signals for diversity + control
+    diversity_boost: float # promotes varied top-k results
 ```
 
 `Song` features used in this simulation:
@@ -44,18 +54,38 @@ likes_acoustic: true
 Algorithm Recipe:
 
 1. Load all songs from `data/songs.csv`.
-2. For each song, compute four component scores:
-   - `mood_match`: 1.0 if song mood matches favorite mood, else 0.0
-   - `genre_match`: 1.0 if song genre matches favorite genre, else 0.0
-   - `energy_match`: `1 - abs(song_energy - target_energy)` (clamped to 0 to 1)
-   - `acoustic_match`: song acousticness if likes_acoustic is true, else `1 - acousticness`
+2. Store preferences like 
+```
+genre_weights = {"indie pop": 1.0, "lofi": 0.8, "jazz": 0.5}
+mood_weights = {"chill": 0.8, "happy": 0.55}; 
+energy_range = (0.3, 0.7)
+acoustic_preference = 0.2 
+```
+2. For each song, compute: 
+   - `genre_match = genre_weights.get(song.genre.lower(), 0.0)`
+   - `mood_match = mood_weights.get(song.mood.lower(), 0.0)`
+
+$$
+   energy\_match =
+   \begin{cases}
+   1, & e_{min} \le song.energy \le e_{max} \\
+   \max(0,\ 1 - d), & \text{otherwise}
+   \end{cases}
+$$
+
+$$
+acoustic\_match = \max(0,\ 1 - |song.acousticness - p|)
+$$
+
 3. Combine components with balanced weights:
    - Mood: 0.35
    - Genre: 0.30
    - Energy: 0.25
    - Acousticness: 0.10
+
 4. Compute final score:
    - `score = 0.35*mood_match + 0.30*genre_match + 0.25*energy_match + 0.10*acoustic_match`
+
 5. Sort all songs by score descending.
 6. Return top k recommendations and an explanation for each score.
 
