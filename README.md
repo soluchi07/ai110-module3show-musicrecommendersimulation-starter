@@ -124,11 +124,21 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-## Demo Screenshot
+## Demo Screenshots
 
-Terminal output example:
+### Initial Run
 
-![Terminal Demo](terminal.png)
+Terminal output showing the baseline recommender with default weights on five test profiles:
+
+![Terminal Demo - First Run](first_run.png)
+
+### User Test 1
+
+Testing and comparison showing how recommendations changed across different profiles:
+
+![User Test Results 1](user_test.png)
+![User Test Results 2](user_test2.png)
+
 
 ### Running Tests
 
@@ -144,38 +154,69 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+### Weight Shift Experiment
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+Changed the importance of energy and genre to see how it affected ranking:
+
+- **Original weights:** Mood 35%, Genre 30%, Energy 25%, Acoustic 10%
+- **Experimental weights:** Mood 35%, Genre 15%, Energy 50%, Acoustic 10%
+- **Result:** Mood remained the dominant factor. Energy-focused profiles (P3, P4) saw slight reranking favoring high-energy/acoustic songs, but most top picks stayed the same. This showed that weight tweaks matter less than we expected when data is sparse.
+
+### Five Adversarial User Profiles
+
+Tested edge cases to probe system robustness:
+
+- **P1 (Conflicting):** Wanted sad mood + super high energy (0.9). System ignored mood (no sad songs) and picked energetic pop.
+- **P2 (Unknown taste):** Asked for "vaportrap" (fake genre) + melancholic. System nailed mood by falling back when genre match failed.
+- **P3 (Opposite poles):** Wanted happy + extremely low energy + high acoustic. System couldn't satisfy all three and picked the mood winner.
+- **P4 (Out of range):** Requested impossible values (energy 1.5, acoustic -0.4). System clamped gracefully and found reasonable matches.
+- **P5 (Weighted conflicts):** Asked for pop + metal equally, sad + happy equally, 0.95–1.0 energy, max acoustic. System favored pop because it fit energy range better.
+
+### Key Finding
+
+Literal genre/mood matching creates filter bubbles. When rare moods (like "melancholic") appear only once in the dataset, users have zero alternatives even when emotionally adjacent songs exist.
+
+See [Model Card](model_card.md) for full evaluation and reflection.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+### Data Size and Representation
 
-Examples:
+MoodMatch only scores from 20 songs. With such a small catalog and uneven mood distribution (11 moods appear only once), users asking for rare emotional tones get locked into a single recommendation with no alternatives. A real recommender needs diversity to feel useful.
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+### Literal Matching Creates Filter Bubbles
 
-You will go deeper on this in your model card.
+The system uses exact string matching for genres and moods. If you ask for a genre that doesn't exist (like "vaportrap"), that entire dimension scores zero for every song. Even worse, emotionally adjacent moods (e.g., "melancholic" vs. "dreamy") are treated as completely unrelated. Users with niche tastes get trapped.
+
+### No Semantic Understanding
+
+The system sees "sad" and "melancholic" as different categories, not similar moods. It doesn't understand that an acoustic folk song might satisfy someone asking for "unplugged" rock, or that a slow dance song might work for someone who said "energetic." This is why fuzzy matching and embeddings matter in production systems.
+
+### Energy Gap Penalty Oversimplifies
+
+The distance-based energy penalty treats energy as a single dimension. But the subjective experience of "energetic but moody" is different from "energetic and upbeat." Without nuance, compromises feel arbitrary.
+
+For analysis of these limitations and future improvements, see the [Model Card](model_card.md).
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+### Key Learnings
 
-[**Model Card**](model_card.md)
+Building MoodMatch taught me that recommender systems are deceptively simple on the surface but hide messy trade-offs underneath. The biggest lesson: **data shapes everything**. We have 20 songs, 16 moods (11 appearing only once), and 17 genres. Those numbers create bottlenecks. When a user asks for "melancholic" music, there's only one option. Our algorithm didn't fail—it just picked the only song available. A real Spotify has millions of songs, so fuzzy search and semantic similarity work. We can't use those tricks.
 
-Write 1 to 2 paragraphs here about what you learned:
+Rebalancing weights (doubling energy, halving genre) mattered less than expected. After the shift, mood still dominated rankings because exact genre matches were so rare in the first place. This taught me that **algorithmic tweaks are less powerful than data representation**. You can't engineer your way out of a bad dataset.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+Most surprising: the system's biggest failure is graceful. Profile P2 asked for "vaportrap" (fake genre), and the system silently ignored that preference, falling back to mood and energy. It felt like the system "got lucky." But that's the trap—broken input produces silently mediocre output. Real systems need better fallbacks and explicit feedback to the user.
+
+### Implications for Real Recommenders
+
+When Spotify recommends a song, it's balancing dozens of signals: your listen history, skip patterns, library additions, similar users' behavior, song metadata, and trending data. If you ask for three contradictory things, the algorithm picks winners without telling you. Our small system reveals that design choice. On real apps, the math is much more complex, but the fundamental trade-off remains: what do you optimize for when you can't satisfy everything?
+
+Read the [**Model Card**](model_card.md) for detailed evaluation of what succeeded, where biases hide, and what we'd improve.
 
 ---
 

@@ -51,23 +51,27 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
     acoustic_match = _clamp(1.0 - abs(song_acousticness - acoustic_preference))
 
+    # Experimental weight shift: emphasize energy, de-emphasize genre.
     mood_weight = 0.35
-    genre_weight = 0.30
-    energy_weight = 0.25
+    genre_weight = 0.30 * 0.5
+    energy_weight = 0.25 * 2.0
     acoustic_weight = 0.10
+    total_weight = mood_weight + genre_weight + energy_weight + acoustic_weight
 
     mood_contrib = mood_weight * mood_match
     genre_contrib = genre_weight * genre_match
     energy_contrib = energy_weight * energy_match
     acoustic_contrib = acoustic_weight * acoustic_match
 
-    score = mood_contrib + genre_contrib + energy_contrib + acoustic_contrib
+    # Normalize to keep scores on a comparable 0..1 scale after weight changes.
+    score = (mood_contrib + genre_contrib + energy_contrib + acoustic_contrib) / total_weight
 
     reasons = [
         f"mood match (+{mood_contrib:.3f}; raw={mood_match:.2f})",
         f"genre match (+{genre_contrib:.3f}; raw={genre_match:.2f})",
         f"energy fit (+{energy_contrib:.3f}; raw={energy_match:.2f}, range={e_min:.2f}-{e_max:.2f})",
         f"acoustic fit (+{acoustic_contrib:.3f}; raw={acoustic_match:.2f}, pref={acoustic_preference:.2f})",
+        f"weight normalization (/{total_weight:.2f})",
     ]
 
     return score, reasons
