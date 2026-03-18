@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class Song:
@@ -20,14 +20,20 @@ class Song:
 
 @dataclass
 class UserProfile:
-    """
-    Represents a user's taste preferences.
-    Required by tests/test_recommender.py
-    """
-    favorite_genre: str
-    favorite_mood: str
-    target_energy: float
-    likes_acoustic: bool
+    # Multiple tastes with strength (0.0 to 1.0)
+    genre_weights: Dict[str, float] = field(default_factory=dict)
+    mood_weights: Dict[str, float] = field(default_factory=dict)
+
+    # Prefer a range, not a single target
+    energy_range: Tuple[float, float] = (0.0, 1.0)
+
+    # Continuous preference instead of yes/no
+    # 0.0 = dislikes acoustic, 1.0 = strongly likes acoustic
+    acoustic_preference: float = 0.5
+
+    # Optional extra signals for diversity + control
+    diversity_boost: float = 0.2      # promotes varied top-k results
+
 
 class Recommender:
     """

@@ -1,0 +1,18 @@
+flowchart LR
+    A[Input: User Preferences\nGenre, Mood, Target Energy, Acoustic Preference]
+    B[Load Songs CSV\nSong rows]
+    C[For each song in CSV\nCompute song score]
+    D{Apply scoring logic\nMood, Genre, Energy, Acoustic}
+    E[Store song + score]
+    F[Sort all songs by score\nHighest to lowest]
+    G[Select Top K]
+    H[Output: Ranked Recommendations]
+
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> C
+    C --> F
+    F --> G
+    G --> H

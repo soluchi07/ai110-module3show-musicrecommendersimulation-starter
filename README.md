@@ -17,7 +17,16 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Real-world recommendation systems usually combine many signals (your past listening, skips, likes, similar users, and song metadata) to estimate what you are most likely to enjoy next. This version is much simpler and more transparent: it prioritizes direct preference matching by giving higher scores to songs that align with a user's favorite genre and mood, stay close to the user's target energy, and optionally match whether the user prefers acoustic tracks.
+Real-world recommendation systems usually combine many signals (your past listening, skips, likes, similar users, and song metadata) to estimate what you are most likely to enjoy next. This recommender uses a transparent scoring loop: every song in the CSV is scored against one user profile, then songs are sorted from highest to lowest score, and the top k are returned.
+
+Finalized `UserProfile` for this simulation:
+
+```text
+favorite_genre: indie pop
+favorite_mood: chill
+target_energy: 0.55
+likes_acoustic: true
+```
 
 `Song` features used in this simulation:
 
@@ -32,12 +41,29 @@ Real-world recommendation systems usually combine many signals (your past listen
 - `danceability`
 - `acousticness`
 
-`UserProfile` features used in this simulation:
+Algorithm Recipe:
 
-- `favorite_genre`
-- `favorite_mood`
-- `target_energy`
-- `likes_acoustic`
+1. Load all songs from `data/songs.csv`.
+2. For each song, compute four component scores:
+   - `mood_match`: 1.0 if song mood matches favorite mood, else 0.0
+   - `genre_match`: 1.0 if song genre matches favorite genre, else 0.0
+   - `energy_match`: `1 - abs(song_energy - target_energy)` (clamped to 0 to 1)
+   - `acoustic_match`: song acousticness if likes_acoustic is true, else `1 - acousticness`
+3. Combine components with balanced weights:
+   - Mood: 0.35
+   - Genre: 0.30
+   - Energy: 0.25
+   - Acousticness: 0.10
+4. Compute final score:
+   - `score = 0.35*mood_match + 0.30*genre_match + 0.25*energy_match + 0.10*acoustic_match`
+5. Sort all songs by score descending.
+6. Return top k recommendations and an explanation for each score.
+
+Potential bias and limitation note:
+
+- This system may still over-prioritize exact genre labels and miss songs with a strong mood/energy fit from other genres.
+- With a small catalog, one or two genres can dominate the top results and reduce diversity.
+- Binary mood and genre matching can oversimplify taste and ignore nuance (for example, songs that are both chill and focused).
 
 ---
 
