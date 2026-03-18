@@ -54,14 +54,16 @@ class UserProfile:
 Algorithm Recipe:
 
 1. Load all songs from `data/songs.csv`.
-2. Store preferences like 
+2. Store preferences like
+
 ```
 genre_weights = {"indie pop": 1.0, "lofi": 0.8, "jazz": 0.5}
-mood_weights = {"chill": 0.8, "happy": 0.55}; 
+mood_weights = {"chill": 0.8, "happy": 0.55};
 energy_range = (0.3, 0.7)
-acoustic_preference = 0.2 
+acoustic_preference = 0.2
 ```
-2. For each song, compute: 
+
+2. For each song, compute:
    - `genre_match = genre_weights.get(song.genre.lower(), 0.0)`
    - `mood_match = mood_weights.get(song.mood.lower(), 0.0)`
 
@@ -121,6 +123,12 @@ pip install -r requirements.txt
 ```bash
 python -m src.main
 ```
+
+## Demo Screenshot
+
+Terminal output example:
+
+![Terminal Demo](terminal.png)
 
 ### Running Tests
 
